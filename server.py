@@ -1,6 +1,10 @@
+import os
 from http.server import BaseHTTPRequestHandler
 from routes.main import routes
-from pathlib import Path
+# from pathlib import Path
+
+from response.templateHandler import TemplateHandler
+from response.badRequestHander import BadRequestHandler
 
 class Server(BaseHTTPRequestHandler):
     def do_HEAD(self):
@@ -10,8 +14,22 @@ class Server(BaseHTTPRequestHandler):
         return
     
     def do_GET(self):
-        self.respond()
-        return
+        split_path = os.path.splitext(self.path) # returns the path as tuple
+        request_extension = split_path[1]
+
+        # only accept HTML for now and reject anything else
+        if request_extension is "" or request_extension is ".html":
+            if self.path in routes:
+                handler = TemplateHandler()
+                handler.find(routes[self.path])
+            else:
+                handler = BadRequestHandler()
+        else:
+            handler = BadRequestHandler()
+
+        self.respond({
+            'handler': handler
+        })
         
     def handle_http(self, status, content_type):
         """What it does that it sends some 'response' which is an int Code like
@@ -53,6 +71,6 @@ class Server(BaseHTTPRequestHandler):
         # to confirm that http is working
         return bytes("Hello World", "UTF-8")
     
-    def respond(self):
-        content = self.handle_http(200, 'text/html')
-        return
+    def respond(self, opts):
+        response = self.handle_http(opts['handler'])
+        self.wfile.write(response)
