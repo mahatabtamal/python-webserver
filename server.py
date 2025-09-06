@@ -1,10 +1,11 @@
 import os
 from http.server import BaseHTTPRequestHandler
 from routes.main import routes
-# from pathlib import Path
+from pathlib import Path
 
+from response.staticHandler import StaticHandler
 from response.templateHandler import TemplateHandler
-from response.badRequestHander import BadRequestHandler
+from response.badRequestHandler import BadRequestHandler
 
 class Server(BaseHTTPRequestHandler):
     def do_HEAD(self):
@@ -18,14 +19,19 @@ class Server(BaseHTTPRequestHandler):
         request_extension = split_path[1]
 
         # only accept HTML for now and reject anything else
-        if request_extension is "" or request_extension is ".html":
+        if request_extension == "" or request_extension == ".html":
             if self.path in routes:
                 handler = TemplateHandler()
                 handler.find(routes[self.path])
             else:
                 handler = BadRequestHandler()
-        else:
+        elif request_extension == ".py":
+            # For security consideration, python scripts will be blocked
             handler = BadRequestHandler()
+        else:
+            # 
+            handler = StaticHandler()
+            handler.find(self.path)
 
         self.respond({
             'handler': handler
